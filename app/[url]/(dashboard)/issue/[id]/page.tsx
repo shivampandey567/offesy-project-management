@@ -56,6 +56,10 @@ import IconBg from '@/components/ui/iconbg'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { useProjects } from '@/hooks/useProjects'
+import { X, FileText, /* ...existing... */ } from 'lucide-react'
+import { useUploadAttachments } from '@/hooks/useUploadAttachments'
+import { MAX_ATTACHMENT_TOTAL_BYTES } from '@/lib/validations/issue'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type SubIssue = { title: string; done: boolean }
 
@@ -97,6 +101,10 @@ const Page = () => {
 
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
     const [deleting, setDeleting] = useState(false)
+
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const { uploadAttachments, uploading: uploadingAttachments } = useUploadAttachments()
 
 
     useEffect(() => {
@@ -285,6 +293,52 @@ const Page = () => {
         }
     }
 
+    const formatBytes = (bytes: number) => {
+        if (bytes < 1024) return `${bytes}B`
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+        return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+    }
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? [])
+        if (!files.length || !issue) return
+
+        const existingTotal = (issue.attachments ?? []).reduce((sum: number, a: any) => sum + (a.size ?? 0), 0)
+        const incomingBytes = files.reduce((sum, f) => sum + f.size, 0)
+
+        if (existingTotal + incomingBytes > MAX_ATTACHMENT_TOTAL_BYTES) {
+            const remaining = MAX_ATTACHMENT_TOTAL_BYTES - existingTotal
+            toast.error(
+                remaining <= 0
+                    ? 'Attachment limit reached (10MB total)'
+                    : `Only ${formatBytes(remaining)} left of the 10MB attachment limit`,
+                { position: 'top-right' }
+            )
+            e.target.value = ''
+            return
+        }
+
+        try {
+            const uploaded = await uploadAttachments(files)
+            const updated = [...(issue.attachments ?? []), ...uploaded]
+            await updateIssue({ attachments: updated })
+            toast(`${files.length} file${files.length > 1 ? 's' : ''} attached`, { position: 'top-right' })
+        } catch (err: any) {
+            toast.error(err.message ?? 'Failed to upload attachment', { position: 'top-right' })
+        } finally {
+            e.target.value = ''
+        }
+    }
+
+    const handleRemoveAttachment = (url: string, name: string) => {
+        if (!issue) return
+        if (!window.confirm(`Delete "${name}"?`)) return
+
+        const updated = (issue.attachments ?? []).filter((a: any) => a.url !== url)
+        updateIssue({ attachments: updated })
+        toast('Attachment deleted', { position: 'top-right' })
+    }
+
 
 
     // add near other derived values, after teamMembers/filteredTeamMembers
@@ -305,15 +359,102 @@ const Page = () => {
         updateIssue({ project: value === 'none' ? null : value })
     }
 
+    if (loading) return (
+        <div className="w-full h-full flex flex-col">
+            <AppHeader
+                secTitle='My-issue'
+                direct={`/${ws.url}/my-issues/assigned`}
+                subTitle=' '
+            />
 
-    if (loading) return <div className="p-6 text-muted-foreground text-sm">Loading...</div>
-    if (forbidden) return (
-        <div className='flex flex-col items-center justify-center gap-3 h-full p-8 text-center'>
-            <p className='font-medium'>This issue isn't assigned to you</p>
-            <p className='text-sm text-muted-foreground'>Only the creator or an assignee can open it.</p>
+            <div className='flex flex-col lg:grid grid-cols-[7fr_3fr] items-start lg:h-[calc(100vh-64px)] lg:min-h-0'>
+                <div className="flex flex-col lg:h-full lg:min-h-0 w-full">
+                    <div className="h-full w-full overflow-y-auto">
+                        <div className="flex flex-col gap-4 px-4 py-6 md:py-8 md:px-8 xl:px-25 min-w-0 w-full">
+                            <div className='flex flex-col gap-3 min-w-0 w-full'>
+                                <Skeleton className="h-8 w-3/4" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-5/6" />
+                                <div className='flex gap-2 mt-1'>
+                                    <Skeleton className="h-8 w-8 rounded-full" />
+                                    <Skeleton className="h-8 w-8 rounded-full" />
+                                    <Skeleton className="h-8 w-8 rounded-full" />
+                                </div>
+                                <div className='flex gap-3 pt-1'>
+                                    <Skeleton className="h-24 w-24 rounded-xl" />
+                                    <Skeleton className="h-24 w-24 rounded-xl" />
+                                </div>
+                            </div>
+
+                            <Card className='bg-background ring-0 w-full min-w-0'>
+                                <CardHeader className='px-0'>
+                                    <Skeleton className="h-8 w-28 rounded-full" />
+                                </CardHeader>
+                                <CardContent className='flex flex-col gap-3 px-1 pb-3'>
+                                    <div className='flex items-center gap-2'>
+                                        <Skeleton className="h-2 w-2 rounded-full" />
+                                        <Skeleton className="h-4 flex-1" />
+                                    </div>
+                                    <div className='flex items-center gap-2'>
+                                        <Skeleton className="h-2 w-2 rounded-full" />
+                                        <Skeleton className="h-4 flex-1" />
+                                    </div>
+                                    <Skeleton className="h-10 w-full rounded-full mt-2" />
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+
+                <div className='min-w-0 w-full flex flex-col p-2 lg:h-full lg:pr-4 gap-2'>
+                    <div className='flex items-center justify-end gap-2'>
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                    <Card className='w-full ring-0 bg-card shadow-md'>
+                        <CardContent className='flex flex-col gap-3'>
+                            <Skeleton className="h-6 w-24 rounded-full" />
+                            <Skeleton className="h-6 w-28 rounded-full" />
+                            <Skeleton className="h-6 w-32 rounded-full" />
+                            <Skeleton className="h-6 w-24 rounded-full" />
+                            <Skeleton className="h-6 w-28 rounded-full" />
+                        </CardContent>
+                    </Card>
+                    <Card className='w-full bg-card ring-0 shadow-md'>
+                        <CardContent className='flex flex-col gap-2'>
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-2/3" />
+                            <Skeleton className="h-8 w-32 rounded-full mt-1" />
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     )
-    if (!issue) return <div className="p-6 text-muted-foreground text-sm">Issue not found</div>
+    if (forbidden) return (
+        <div className="w-full h-full flex flex-col">
+            <AppHeader
+                secTitle='My-issue'
+                direct={`/${ws.url}/my-issues/assigned`}
+                subTitle="You can't access this issue"
+            />
+            <div className='flex flex-col items-center justify-center gap-3 h-full p-8 text-center'>
+                <p className='font-medium'>This issue isn't assigned to you</p>
+                <p className='text-sm text-muted-foreground'>Only the creator or an assignee can open it.</p>
+            </div>
+        </div>
+    )
+    if (!issue) return (
+        <div className="w-full h-full flex flex-col">
+            <AppHeader
+                secTitle='My-issue'
+                direct={`/${ws.url}/my-issues/assigned`}
+                subTitle="Issue not found"
+            />
+            <div className="p-6 text-muted-foreground text-sm">Issue not found</div>
+        </div>
+    )
 
     const selectedMarkup = MARKUP_OPTIONS.find((s) => s.label === issue.markup)
     const MarkupIcon = selectedMarkup?.Icon ?? CircleCheck
@@ -387,147 +528,202 @@ const Page = () => {
                     </Card>
                 </div>
             )}
-            <div className='flex flex-col md:grid grid-cols-[7fr_3fr] items-start'>
-                <div className="flex flex-col gap-2 px-4 py-8 md:pl-15 lg:px-25 min-w-0 w-full">
-                    <div className='flex flex-col gap-3 min-w-0 w-full'>
-                        <div className='relative w-full min-w-0'>
-                            <TextareaAutosize
-                                value={title}
-                                onChange={(e) => handleTitleChange(e.target.value)}
-                                onKeyDown={handleTitleKeyDown}
-                                placeholder="Issue title"
-                                readOnly={readonly}
-                                className="w-full max-w-full resize-none bg-transparent px-1 outline-none border-none ring-0 shadow-none focus:outline-none focus:ring-0 focus:border-none !text-2xl font-semibold text-accent-foreground"
-                            />
-                        </div>
-                        <div className="relative w-full min-w-0">
-                            <TextareaAutosize
-                                value={description}
-                                onChange={(e) => handleDescriptionChange(e.target.value)}
-                                placeholder={`${readonly ? 'No description' : 'Add a description...'}`}
-                                readOnly={readonly}
-                                className="w-full max-w-full resize-none bg-transparent px-1 text-base outline-none border-none ring-0 shadow-none focus:outline-none focus:ring-0 focus:border-none md:text-md text-accent-foreground/80"
-                            />
-                        </div>
-                        <div className='mt-1 flex gap-2'>
-                            <Button className='rounded-full' variant='ghost' size='icon-sm'><Paperclip /></Button>
-                            <Button className='rounded-full' variant='ghost' size='icon-sm'><FilePlusCorner /></Button>
-                            <Button className='rounded-full' variant='ghost' size='icon-sm'><Link2 /></Button>
-                        </div>
-                    </div>
-
-                    <Card className='bg-background ring-0 w-full min-w-0'>
-                        <CardHeader className='px-0'>
-                            <Button
-                                type='button'
-                                onClick={() => setSubIssuesOpen((prev) => !prev)}
-                                className='rounded-full w-fit'
-                                variant='ghost'
-                                size='sm'
-                            >
-                                Sub-issues
-                                <ChevronDown
-                                    size={15}
-                                    className={`transition-transform duration-200 ${subIssuesOpen ? 'rotate-180' : 'rotate-0'}`}
+            <div className='flex flex-col lg:grid grid-cols-[7fr_3fr] items-start lg:h-[calc(100vh-64px)] lg:min-h-0'>
+                <div className="flex flex-col lg:h-full lg:min-h-0 w-full">
+                    <div className="thin-scrollbar h-full w-full overflow-y-auto">
+                        <div className="flex flex-col gap-2 px-4 py-6 md:py-8 md:px-8 xl:px-25 min-w-0 w-full">
+                            <div className='flex flex-col gap-3 min-w-0 w-full'>
+                                <div className='relative w-full min-w-0'>
+                                    <TextareaAutosize
+                                        value={title}
+                                        onChange={(e) => handleTitleChange(e.target.value)}
+                                        onKeyDown={handleTitleKeyDown}
+                                        placeholder="Issue title"
+                                        readOnly={readonly}
+                                        className="w-full max-w-full resize-none bg-transparent px-1 outline-none border-none ring-0 shadow-none focus:outline-none focus:ring-0 focus:border-none !text-2xl font-semibold text-accent-foreground"
+                                    />
+                                </div>
+                                <div className="relative w-full min-w-0">
+                                    <TextareaAutosize
+                                        value={description}
+                                        onChange={(e) => handleDescriptionChange(e.target.value)}
+                                        placeholder={`${readonly ? 'No description' : 'Add a description...'}`}
+                                        readOnly={readonly}
+                                        className="w-full max-w-full resize-none bg-transparent px-1 text-base outline-none border-none ring-0 shadow-none focus:outline-none focus:ring-0 focus:border-none md:text-md text-accent-foreground/80"
+                                    />
+                                </div>
+                                <input
+                                    ref={fileInputRef}
+                                    type='file'
+                                    multiple
+                                    accept='image/*,.pdf,.doc,.docx'
+                                    className='hidden'
+                                    onChange={handleFileChange}
                                 />
-                            </Button>
-                        </CardHeader>
+                                <div className='mt-1 flex gap-2'>
+                                    <Button
+                                        className='rounded-full'
+                                        variant='ghost'
+                                        size='icon-sm'
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={readonly || uploadingAttachments}
+                                    >
+                                        <Paperclip />
+                                    </Button>
+                                    <Button className='rounded-full' variant='ghost' size='icon-sm'><FilePlusCorner /></Button>
+                                    <Button className='rounded-full' variant='ghost' size='icon-sm'><Link2 /></Button>
+                                </div>
 
-                        <div
-                            className={`grid transition-all duration-200 ease-in-out ${subIssuesOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
-                        >
-                            <div className='overflow-hidden min-w-0'>
-                                <CardContent className='flex flex-col gap-1 px-1 pb-1 w-full min-w-0'>
-                                    {(issue.subIssues ?? []).map((t: SubIssue, i: number) => (
-                                        <div key={i} className='flex items-center gap-2 py-2 pl-2 group min-w-0 w-full'>
-                                            {(readonly || isBoth) ? (
-                                                <Checkbox
-                                                    checked={t.done}
-                                                    onCheckedChange={() => handleToggleSubIssue(i)}
-                                                    id={`subissue-${i}`}
-                                                />
-                                            ) : (
+                                {(issue.attachments ?? []).length > 0 && (
+                                    <div className='flex flex-wrap gap-3 px-1 pt-1'>
+                                        {issue.attachments.map((a: any) => (
+                                            <div key={a.url} className='group relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border bg-muted'>
                                                 <button
                                                     type='button'
-                                                    onClick={() => handleToggleSubIssue(i)}
-                                                    className={`h-2 w-2 shrink-0 rounded-full ${t.done ? 'bg-muted-foreground' : 'bg-foreground'}`}
-                                                />
-                                            )}
-                                            {editingIndex === i ? (
-                                                <InputGroup className='flex-1 min-w-0 h-7'>
-                                                    <InputGroupInput
-                                                        value={editingTitle}
-                                                        onChange={(e) => setEditingTitle(e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') handleEditSubIssue(i)
-                                                            if (e.key === 'Escape') setEditingIndex(null)
-                                                        }}
-                                                        autoFocus
-                                                    />
-                                                    <InputGroupAddon align='inline-end'>
-                                                        <Button className='rounded-md' size='icon-xs' onClick={() => handleEditSubIssue(i)}><Check strokeWidth={3} /></Button>
-                                                    </InputGroupAddon>
-                                                </InputGroup>
-                                            ) : (
-                                                <>
-                                                    {(readonly || isBoth) ? (
-                                                        <label
-                                                            htmlFor={`subissue-${i}`}
-                                                            className={`flex-1 min-w-0 text-sm leading-snug break-all overflow-hidden cursor-pointer ${t.done ? 'line-through text-muted-foreground' : ''}`}
-                                                        >
-                                                            {t.title}
-                                                        </label>
+                                                    onClick={() => a.isImage ? setLightboxUrl(a.url) : window.open(a.url, '_blank')}
+                                                    className='h-full w-full cursor-pointer'
+                                                >
+                                                    {a.isImage ? (
+                                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                                        <img src={a.url} alt={a.name} className='h-full w-full object-cover' />
                                                     ) : (
-                                                        <span className={`flex-1 min-w-0 text-sm leading-snug break-all overflow-hidden ${t.done ? 'line-through text-muted-foreground' : ''}`}>
-                                                            {t.title}
-                                                        </span>
+                                                        <div className='flex h-full w-full flex-col items-center gap-1.5 p-2'>
+                                                            <span className='line-clamp-1 w-full text-center text-[10px] text-muted-foreground break-all'>
+                                                                {a.name}
+                                                            </span>
+                                                            <div className='flex flex-1 justify-center mt-3'>
+                                                                <FileText size={22} className='text-muted-foreground' />
+                                                            </div>
+                                                        </div>
                                                     )}
-                                                    {!readonly && (
+                                                </button>
+                                                <button
+                                                    type='button'
+                                                    onClick={(e) => { e.stopPropagation(); handleRemoveAttachment(a.url, a.name) }}
+                                                    className='absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100'
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <Card className='bg-background ring-0 w-full min-w-0'>
+                                <CardHeader className='px-0'>
+                                    <Button
+                                        type='button'
+                                        onClick={() => setSubIssuesOpen((prev) => !prev)}
+                                        className='rounded-full w-fit'
+                                        variant='ghost'
+                                        size='sm'
+                                    >
+                                        Sub-issues
+                                        <ChevronDown
+                                            size={15}
+                                            className={`transition-transform duration-200 ${subIssuesOpen ? 'rotate-180' : 'rotate-0'}`}
+                                        />
+                                    </Button>
+                                </CardHeader>
+
+                                <div
+                                    className={`grid transition-all duration-200 ease-in-out ${subIssuesOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+                                >
+                                    <div className='overflow-hidden min-w-0'>
+                                        <CardContent className='flex flex-col gap-1 px-1 pb-1 w-full min-w-0'>
+                                            {(issue.subIssues ?? []).map((t: SubIssue, i: number) => (
+                                                <div key={i} className='flex items-center gap-2 py-2 pl-2 group min-w-0 w-full'>
+                                                    {(readonly || isBoth) ? (
+                                                        <Checkbox
+                                                            checked={t.done}
+                                                            onCheckedChange={() => handleToggleSubIssue(i)}
+                                                            id={`subissue-${i}`}
+                                                        />
+                                                    ) : (
+                                                        <button
+                                                            type='button'
+                                                            onClick={() => handleToggleSubIssue(i)}
+                                                            className={`h-2 w-2 shrink-0 rounded-full ${t.done ? 'bg-muted-foreground' : 'bg-foreground'}`}
+                                                        />
+                                                    )}
+                                                    {editingIndex === i ? (
+                                                        <InputGroup className='flex-1 min-w-0 h-7'>
+                                                            <InputGroupInput
+                                                                value={editingTitle}
+                                                                onChange={(e) => setEditingTitle(e.target.value)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') handleEditSubIssue(i)
+                                                                    if (e.key === 'Escape') setEditingIndex(null)
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                            <InputGroupAddon align='inline-end'>
+                                                                <Button className='rounded-md' size='icon-xs' onClick={() => handleEditSubIssue(i)}><Check strokeWidth={3} /></Button>
+                                                            </InputGroupAddon>
+                                                        </InputGroup>
+                                                    ) : (
                                                         <>
-                                                            <Button
-                                                                variant='ghost' size='icon'
-                                                                className='opacity-100 xl:opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0'
-                                                                onClick={() => { setEditingIndex(i); setEditingTitle(t.title) }}
-                                                            >
-                                                                <Pencil size={13} />
-                                                            </Button>
-                                                            <Button
-                                                                variant='ghost' size='icon'
-                                                                className='opacity-100 xl:opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0'
-                                                                onClick={() => handleDeleteSubIssue(i)}
-                                                            >
-                                                                <Trash2 size={13} />
-                                                            </Button>
+                                                            {(readonly || isBoth) ? (
+                                                                <label
+                                                                    htmlFor={`subissue-${i}`}
+                                                                    className={`flex-1 min-w-0 text-sm leading-snug break-all overflow-hidden cursor-pointer ${t.done ? 'line-through text-muted-foreground' : ''}`}
+                                                                >
+                                                                    {t.title}
+                                                                </label>
+                                                            ) : (
+                                                                <span className={`flex-1 min-w-0 text-sm leading-snug break-all overflow-hidden ${t.done ? 'line-through text-muted-foreground' : ''}`}>
+                                                                    {t.title}
+                                                                </span>
+                                                            )}
+                                                            {!readonly && (
+                                                                <>
+                                                                    <Button
+                                                                        variant='ghost' size='icon'
+                                                                        className='opacity-100 xl:opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0'
+                                                                        onClick={() => { setEditingIndex(i); setEditingTitle(t.title) }}
+                                                                    >
+                                                                        <Pencil size={13} />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant='ghost' size='icon'
+                                                                        className='opacity-100 xl:opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0'
+                                                                        onClick={() => handleDeleteSubIssue(i)}
+                                                                    >
+                                                                        <Trash2 size={13} />
+                                                                    </Button>
+                                                                </>
+                                                            )}
                                                         </>
                                                     )}
-                                                </>
-                                            )}
-                                        </div>
-                                    ))}
+                                                </div>
+                                            ))}
 
-                                    {!readonly && (
-                                        <div className='pt-2 w-full min-w-0'>
-                                            <InputGroup className='w-full min-w-0 h-10 rounded-full'>
-                                                <InputGroupInput
-                                                    value={newSubIssue}
-                                                    onChange={(e) => setNewSubIssue(e.target.value)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleAddSubIssue()}
-                                                    placeholder='Add a sub-issue...'
-                                                    className='min-w-0'
-                                                />
-                                                <InputGroupAddon align='inline-end'>
-                                                    <Button className='rounded-full cursor-pointer shrink-0' size='icon' onClick={handleAddSubIssue}><ArrowUp /></Button>
-                                                </InputGroupAddon>
-                                            </InputGroup>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </div>
+                                            {!readonly && (
+                                                <div className='pt-2 w-full min-w-0'>
+                                                    <InputGroup className='w-full min-w-0 h-10 rounded-full'>
+                                                        <InputGroupInput
+                                                            value={newSubIssue}
+                                                            onChange={(e) => setNewSubIssue(e.target.value)}
+                                                            onKeyDown={(e) => e.key === 'Enter' && handleAddSubIssue()}
+                                                            placeholder='Add a sub-issue...'
+                                                            className='min-w-0'
+                                                        />
+                                                        <InputGroupAddon align='inline-end'>
+                                                            <Button className='rounded-full cursor-pointer shrink-0' size='icon' onClick={handleAddSubIssue}><ArrowUp /></Button>
+                                                        </InputGroupAddon>
+                                                    </InputGroup>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </div>
+                                </div>
+                            </Card>
                         </div>
-                    </Card>
+                    </div>
                 </div>
 
-                <div className='min-w-0 w-full flex flex-col p-2 md:pr-4 gap-2'>
+                <div className='min-w-0 w-full flex flex-col p-2 lg:h-full lg:pr-4 gap-2'>
                     <div className='flex items-center justify-end gap-2'>
                         <Button className='rounded-full bg-card' size='icon' variant='outline'><Link /></Button>
                         <Button className='rounded-full bg-card' size='icon' variant='outline'><GitMerge /></Button>
@@ -927,6 +1123,27 @@ const Page = () => {
                     </Card>
                 </div >
             </div >
+            {lightboxUrl && (
+                <div
+                    onClick={() => setLightboxUrl(null)}
+                    className='fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-6'
+                >
+                    <button
+                        type='button'
+                        onClick={() => setLightboxUrl(null)}
+                        className='absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20'
+                    >
+                        <X size={18} />
+                    </button>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={lightboxUrl}
+                        alt='attachment preview'
+                        onClick={(e) => e.stopPropagation()}
+                        className='max-h-full max-w-full rounded-lg object-contain'
+                    />
+                </div>
+            )}
         </div >
     )
 }

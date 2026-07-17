@@ -27,7 +27,7 @@ const AppHeader = ({
 
     return (
         <>
-            <header className="absolute w-full bg-background border-b-1 border-sidebar rounded-t-lg flex h-11 shrink-0 items-center z-50">
+            <header className="fixed lg:absolute w-full bg-background border-b-1 border-sidebar rounded-t-lg flex h-11 shrink-0 items-center z-50">
                 <div className="flex items-center justify-between w-full px-2">
                     <div className="flex gap-3">
                         <SidebarTrigger className={`${isOpen ? 'md:hidden' : ''} cursor-e-resize`} />

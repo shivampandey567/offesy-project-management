@@ -24,6 +24,7 @@ import { Input } from './ui/input'
 import { DueDatePicker } from './date-picker'
 import { toast } from 'sonner'
 import { useCreateIssue } from '@/hooks/useCreateIssue'
+import { useUploadAttachments } from '@/hooks/useUploadAttachments'
 import { MAX_ATTACHMENT_TOTAL_BYTES } from '@/lib/validations/issue'
 import { useProjects } from '@/hooks/useProjects'
 
@@ -77,6 +78,7 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
     const { team } = useTeamById(selectedSlug, ws.id)
     const { members, loading: membersLoading } = useWorkspaceMembers(ws.id)
     const { createIssue, submitting } = useCreateIssue()
+    const { uploadAttachments, uploading: uploadingAttachments } = useUploadAttachments()
 
     const WorkspaceMembers = useMemo(
         () =>
@@ -218,6 +220,10 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
         }
 
         try {
+            const attachments = attachedFiles.length > 0
+                ? await uploadAttachments(attachedFiles.map((f) => f.file))
+                : []
+
             const targets = assigneeIds.length > 0 ? assigneeIds : [undefined]
 
             const results = await Promise.allSettled(
@@ -231,7 +237,7 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
                         workspaceId: ws.id,
                         assignee: assigneeId ?? null,
                         dueDate: dueDate ? dueDate.toISOString() : undefined,
-                        attachments: [],
+                        attachments,
                         project: projectId || undefined,
                     })
                 )
@@ -561,9 +567,13 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
                             variant='blue'
                             size='sm'
                             onClick={handleCreateIssue}
-                            disabled={submitting}
+                            disabled={submitting || uploadingAttachments}
                         >
-                            {submitting ? 'Creating…' : 'Create issue'}
+                            {uploadingAttachments
+                                ? 'Uploading…'
+                                : submitting
+                                    ? 'Creating…'
+                                    : 'Create issue'}
                         </Button>
                     </div>
                 </CardFooter>
