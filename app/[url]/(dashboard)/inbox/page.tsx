@@ -1,20 +1,14 @@
-// [url]/(dashboard)/inbox/page.tsx
-import { connectDB } from "@/lib/db"
+import AppHeader from '@/components/app-header'
 
-export default async function InboxPage({
-  params,
-}: {
-  params: Promise<{ url: string }>
-}) {
-  const { url } = await params
-  await connectDB()
-
+const Page = () => {
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold">Inbox</h1>
-      <p className="text-muted-foreground text-sm">
-        Welcome to <span className="font-mono">{url}</span>
-      </p>
+    <div className='w-full h-full'>
+        <AppHeader title='Inbox'/>
+        <div className='flex flex-1 justify-center items-center'>
+            <p>Comming soon</p>
+        </div>
     </div>
   )
 }
+
+export default Page

@@ -60,6 +60,7 @@ import { X, FileText, /* ...existing... */ } from 'lucide-react'
 import { useUploadAttachments } from '@/hooks/useUploadAttachments'
 import { MAX_ATTACHMENT_TOTAL_BYTES } from '@/lib/validations/issue'
 import { Skeleton } from '@/components/ui/skeleton'
+import CommentsSection from '@/components/CommentsSection'
 
 type SubIssue = { title: string; done: boolean }
 
@@ -494,6 +495,7 @@ const Page = () => {
                             <DropdownMenuItem
                                 onClick={() => setDeleteConfirmOpen(true)}
                                 className="text-destructive focus:text-destructive"
+                                variant="destructive"
                             >
                                 Delete issue
                             </DropdownMenuItem>
@@ -566,7 +568,7 @@ const Page = () => {
                                         variant='ghost'
                                         size='icon-sm'
                                         onClick={() => fileInputRef.current?.click()}
-                                        disabled={readonly || uploadingAttachments}
+                                        disabled={uploadingAttachments}
                                     >
                                         <Paperclip />
                                     </Button>
@@ -719,6 +721,13 @@ const Page = () => {
                                     </div>
                                 </div>
                             </Card>
+                            <CommentsSection
+                                targetType='issue'
+                                targetId={id}
+                                workspaceId={ws.id}
+                                members={filteredTeamMembers}
+                                onImageClick={(url) => setLightboxUrl(url)}
+                            />
                         </div>
                     </div>
                 </div>
