@@ -111,9 +111,12 @@ export const useComments = (
     }
 
     const toggleReaction = async (id: string, emoji: string, currentUserId: string) => {
+        let previousReactions: Reaction[] | undefined
+
         setComments(prev => prev.map(c => {
             if (c._id !== id) return c
-            const reactions: Reaction[] = [...(c.reactions ?? [])]
+            previousReactions = c.reactions ?? []
+            const reactions: Reaction[] = [...previousReactions]
             const existing = reactions.find(r => r.emoji === emoji)
             if (!existing) {
                 return { ...c, reactions: [...reactions, { emoji, users: [currentUserId] }] }
@@ -135,7 +138,10 @@ export const useComments = (
             })
             if (!res.ok) throw new Error('Failed to toggle reaction')
         } catch {
-            // Revert on failure by re-fetching is safest; for now just rely on Pusher reconciliation.
+            // Roll back to the known-good reactions on API failure
+            if (previousReactions) {
+                setComments(prev => prev.map(c => c._id === id ? { ...c, reactions: previousReactions! } : c))
+            }
         }
     }
 

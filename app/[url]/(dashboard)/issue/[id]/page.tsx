@@ -9,7 +9,7 @@ import TextareaAutosize from "react-textarea-autosize"
 import AppHeader from '@/components/app-header'
 import { Button } from '@/components/ui/button'
 import {
-    ArrowUp, Check, ChevronDown, Circle, AlertCircle, Eye, CircleCheck,
+    ArrowUp, Check, ChevronDown,
     GitMerge, Link, MousePointer2, Paperclip, Pencil, Search, Trash2, UserCircle, Box,
     SignalLow,
     SignalMedium,
@@ -29,6 +29,7 @@ import {
     RotateCw,
     Dot,
     Folder,
+    X, FileText
 } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
@@ -48,28 +49,19 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { DueDatePicker } from '@/components/date-picker'
 import { toast } from 'sonner'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import TextBg from '@/components/ui/textbg'
 import { useTeamById } from '@/hooks/useTeamById'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import IconBg from '@/components/ui/iconbg'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Separator } from '@/components/ui/separator'
 import { useProjects } from '@/hooks/useProjects'
-import { X, FileText, /* ...existing... */ } from 'lucide-react'
 import { useUploadAttachments } from '@/hooks/useUploadAttachments'
 import { MAX_ATTACHMENT_TOTAL_BYTES } from '@/lib/validations/issue'
 import { Skeleton } from '@/components/ui/skeleton'
 import CommentsSection from '@/components/CommentsSection'
+import { TaskActionBadge, TaskStatusBadge } from '@/components/ui/task-status'
 
 type SubIssue = { title: string; done: boolean }
 
-const MARKUP_OPTIONS = [
-    { label: 'Task', Icon: CircleCheck },
-    { label: 'To do', Icon: Circle },
-    { label: 'Issue', Icon: AlertCircle },
-    { label: 'Review', Icon: Eye },
-]
 const PRIORITY_OPTIONS = [
     { label: 'None', Icon: Dot },
     { label: 'Low', Icon: SignalLow },
@@ -242,10 +234,7 @@ const Page = () => {
     }
 
     // ✅ issue/Priority/Assignee dropdown handlers — update directly on change
-    const handleMarkupChange = (value: string) => {
-        updateIssue({ markup: value })
-    }
-
+    
     const handlePriorityChange = (value: string) => {
         updateIssue({ priority: value === 'None' ? null : (value as any) })
     }
@@ -457,8 +446,6 @@ const Page = () => {
         </div>
     )
 
-    const selectedMarkup = MARKUP_OPTIONS.find((s) => s.label === issue.markup)
-    const MarkupIcon = selectedMarkup?.Icon ?? CircleCheck
 
     const selectedPriority = PRIORITY_OPTIONS.find((p) => p.label === issue.priority)
     const PriorityIcon = selectedPriority?.Icon
@@ -741,10 +728,6 @@ const Page = () => {
                     <Card className='w-full ring-0 bg-card shadow-md'>
                         {readonly ? (
                             <CardContent className='flex flex-col gap-2'>
-                                <div className='flex items-center gap-2 px-3 py-1 text-sm text-accent-foreground/80'>
-                                    <MarkupIcon size={14} />
-                                    {issue.markup}
-                                </div>
                                 <div className='flex items-center gap-2 px-3 py-1 text-sm text-accent-foreground/80 capitalize'>
                                     {PriorityIcon && <PriorityIcon size={14} /> || <Loader size={14} />}
                                     {issue.priority || ' No priority'}
@@ -786,27 +769,6 @@ const Page = () => {
                             </CardContent>
                         ) : (
                             <CardContent className='flex flex-col gap-2'>
-                                {/* ✅ issue (markup) dropdown */}
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button className='rounded-full w-fit text-accent-foreground/80' size='sm' variant='ghost'>
-                                            <MarkupIcon size={14} />
-                                            {issue.markup}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuGroup>
-                                            <DropdownMenuRadioGroup value={issue.markup} onValueChange={handleMarkupChange}>
-                                                {MARKUP_OPTIONS.map(({ label, Icon }) => (
-                                                    <DropdownMenuRadioItem key={label} value={label}>
-                                                        <Icon size={14} className='text-muted-foreground' />
-                                                        {label}
-                                                    </DropdownMenuRadioItem>
-                                                ))}
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuGroup>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
 
                                 {/* ✅ Priority dropdown */}
                                 <DropdownMenu>
@@ -818,7 +780,7 @@ const Page = () => {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
                                         <DropdownMenuGroup>
-                                            <DropdownMenuRadioGroup value={issue.priority ?? ''} onValueChange={handlePriorityChange}>
+                                            <DropdownMenuRadioGroup value={issue.priority ?? 'None'} onValueChange={handlePriorityChange}>
                                                 {PRIORITY_OPTIONS.map(({ label, Icon }) => (
                                                     <DropdownMenuRadioItem key={label} value={label} className='capitalize'>
                                                         <Icon size={14} className='text-muted-foreground' />
@@ -926,7 +888,7 @@ const Page = () => {
                                                     No projects in this team
                                                 </DropdownMenuLabel>
                                             ) : (
-                                                <DropdownMenuRadioGroup value={currentProjectId ?? 'none'} onValueChange={handleProjectChange}>
+                                                <DropdownMenuRadioGroup value={currentProjectId ?? 'None'} onValueChange={handleProjectChange}>
                                                     <DropdownMenuRadioItem value='none'>
                                                         <span className='flex h-4 w-4 items-center justify-center shrink-0'>
                                                             <Dot size={14} className='text-muted-foreground' />
@@ -959,6 +921,11 @@ const Page = () => {
                                 />
                             </CardContent>
                         )}
+                    </Card>
+                    <Card className='w-full bg-card ring-0 shadow-md'>
+                        <CardContent className='px-6'>
+                            {issue.action ? <TaskActionBadge action={issue.action} /> : <TaskStatusBadge status={issue.status} />}
+                        </CardContent>
                     </Card>
                     <Card className='w-full bg-card ring-0 shadow-md'>
                         {(readonly || isBoth) ? (

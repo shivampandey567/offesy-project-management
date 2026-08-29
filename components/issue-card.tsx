@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card'
-import { Box, ChevronRight, Maximize2, Minimize2, Paperclip, Search, UserCircle, X, FileText, Circle, AlertCircle, Eye, CircleCheck, Check, SignalLow, SignalMedium, SignalHigh, MessageSquareWarning, Loader, Dot, Folder } from 'lucide-react'
+import { Box, ChevronRight, Maximize2, Minimize2, Paperclip, Search, UserCircle, X, FileText, SignalLow, SignalMedium, SignalHigh, MessageSquareWarning, Loader, Dot, Folder } from 'lucide-react'
 import { Button } from './ui/button'
 import { ScrollArea } from './ui/scroll-area'
 import TextareaAutosize from "react-textarea-autosize"
@@ -27,13 +27,6 @@ import { useCreateIssue } from '@/hooks/useCreateIssue'
 import { useUploadAttachments } from '@/hooks/useUploadAttachments'
 import { MAX_ATTACHMENT_TOTAL_BYTES } from '@/lib/validations/issue'
 import { useProjects } from '@/hooks/useProjects'
-
-const MARKUP_OPTIONS = [
-    { label: 'Task', Icon: CircleCheck },
-    { label: 'To do', Icon: Circle },
-    { label: 'Issue', Icon: AlertCircle },
-    { label: 'Review', Icon: Eye },
-]
 
 const PRIORITY_OPTIONS = [
     { label: 'None', Icon: Dot },
@@ -189,8 +182,6 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
         })
     }
 
-    const selectedMarkup = MARKUP_OPTIONS.find((s) => s.label === markup)
-    const MarkupIcon = selectedMarkup?.Icon ?? CircleCheck
 
     const selectedPriority = PRIORITY_OPTIONS.find((p) => p.label === priority)
     const PriorityIcon = selectedPriority?.Icon
@@ -231,7 +222,6 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
                     createIssue({
                         title,
                         description,
-                        markup,
                         priority: priority || undefined,
                         teamId: selectedTeam._id,
                         workspaceId: ws.id,
@@ -362,25 +352,6 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
                 </CardContent>
                 <CardFooter className='bg-card border-none flex flex-col items-start gap-4'>
                     <div className='flex flex-wrap items-center gap-2 '>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size='sm' className='rounded-full'>
-                                    <MarkupIcon size={14} />
-                                    {markup}
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuGroup>
-                                    <DropdownMenuRadioGroup value={markup} onValueChange={setMarkup}>
-                                        {MARKUP_OPTIONS.map(({ label, Icon }) => (
-                                            <DropdownMenuRadioItem key={label} value={label}>
-                                                <Icon className='text-muted-foreground' />{label}
-                                            </DropdownMenuRadioItem>
-                                        ))}
-                                    </DropdownMenuRadioGroup>
-                                </DropdownMenuGroup>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -391,7 +362,7 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                                 <DropdownMenuGroup>
-                                    <DropdownMenuRadioGroup value={priority} onValueChange={(val) => setPriority(val === 'None' ? '' : val)}>
+                                    <DropdownMenuRadioGroup value={priority || 'None'} onValueChange={(val) => setPriority(val === 'None' ? '' : val)}>
                                         {PRIORITY_OPTIONS.map(({ label, Icon }) => (
                                             <DropdownMenuRadioItem key={label} value={label} className='capitalize'>
                                                 <Icon size={14} className='text-muted-foreground' />
@@ -510,10 +481,10 @@ const IssueCard = ({ onClose, icon, slug }: { onClose: () => void, icon?: string
                                         </DropdownMenuLabel>
                                     ) : (
                                         <DropdownMenuRadioGroup
-                                            value={projectId || 'none'}
-                                            onValueChange={(val) => setProjectId(val === 'none' ? '' : val)}
+                                            value={projectId || 'None'}
+                                            onValueChange={(val) => setProjectId(val === 'None' ? '' : val)}
                                         >
-                                            <DropdownMenuRadioItem value='none'>
+                                            <DropdownMenuRadioItem value='None'>
                                                 <span className='flex h-4 w-4 items-center justify-center shrink-0'>
                                                     <Dot size={14} className='text-muted-foreground' />
                                                 </span>

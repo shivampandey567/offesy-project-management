@@ -13,11 +13,6 @@ const IssueSchema = new Schema({
     title: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
 
-    markup: {
-        type: String,
-        enum: ['Task', 'To do', 'Issue', 'Review'],
-        default: 'Task',
-    },
     priority: {
         type: String,
         enum: ['Low', 'Medium', 'High', 'Urgent',null],

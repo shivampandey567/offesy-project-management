@@ -7,10 +7,19 @@ export const useIssueById = (id: string) => {
     const [forbidden, setForbidden] = useState(false)
     const [isCreator, setIsCreator] = useState(false)
     const [isAssignee, setIsAssignee] = useState(false)
-    const subscribed = useRef(false)
+    const subscribed = useRef<string | null>(null)
 
     // GET
     useEffect(() => {
+        if (!id) {
+            setIssue(null)
+            setLoading(false)
+            setForbidden(false)
+            setIsCreator(false)
+            setIsAssignee(false)
+            return
+        }
+
         fetch(`/api/issue/${id}`)
             .then(res => res.json())
             .then(data => {
@@ -24,26 +33,46 @@ export const useIssueById = (id: string) => {
                 setIsAssignee(data.meta?.isAssignee ?? false)
                 setLoading(false)
             })
-            .catch(() => setLoading(false))
+            .catch(() => {
+                setIssue(null)
+                setLoading(false)
+            })
     }, [id])
+
     // Pusher
     useEffect(() => {
-        if (subscribed.current) return
-        subscribed.current = true
+        if (!id || subscribed.current === id) return
+        subscribed.current = id
 
-        const channel = pusherClient?.subscribe(`issue-${id}`)
+        const channelName = `issue-${id}`
+        const channel = pusherClient?.subscribe(channelName)
 
-        channel?.bind('issue:updated', (data: Record<string, any>) => {
-            setIssue((prev: any) => ({ ...prev, ...data }))
-        })
+        const handleUpdated = (data: Record<string, any>) => {
+            setIssue((prev: any) => {
+                if (!prev) return data
+                const next = { ...prev, ...data }
+                // preserve populated assignee object if the update only sent an id string
+                const prevAssigneeId = String(prev.assignee?._id ?? prev.assignee)
+                const nextAssigneeId = String(next.assignee?._id ?? next.assignee)
+                if (prevAssigneeId === nextAssigneeId && typeof next.assignee === 'string') {
+                    next.assignee = prev.assignee
+                }
+                return next
+            })
+        }
 
-        channel?.bind('issue:deleted', () => {
+        const handleDeleted = () => {
             setIssue(null)
-        })
+        }
+
+        channel?.bind('issue:updated', handleUpdated)
+        channel?.bind('issue:deleted', handleDeleted)
 
         return () => {
-            pusherClient?.unsubscribe(`issue-${id}`)
-            subscribed.current = false
+            // only remove this hook's listeners; leave the shared channel subscribed
+            channel?.unbind('issue:updated', handleUpdated)
+            channel?.unbind('issue:deleted', handleDeleted)
+            subscribed.current = null
         }
     }, [id])
 

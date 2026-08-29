@@ -7,10 +7,14 @@ import { pusherClient } from "@/lib/pusherClient"
 export const useProjects = (workspaceId: string, teamId?: string) => {
     const [projects, setProjects] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const subscribed = useRef(false)
+    const subscribed = useRef<string | null>(null)
 
     useEffect(() => {
-        if (!workspaceId || !teamId) return
+        if (!workspaceId || !teamId) {
+            setProjects([])
+            setLoading(false)
+            return
+        }
         setLoading(true)
         fetch(`/api/project?workspaceId=${workspaceId}&teamId=${teamId}`)
             .then(res => res.json())
@@ -21,8 +25,8 @@ export const useProjects = (workspaceId: string, teamId?: string) => {
     }, [workspaceId, teamId])
 
     useEffect(() => {
-        if (!workspaceId || !teamId || subscribed.current) return
-        subscribed.current = true
+        if (!workspaceId || !teamId || subscribed.current === `${workspaceId}:${teamId}`) return
+        subscribed.current = `${workspaceId}:${teamId}`
 
         const channelName = `workspace-${workspaceId}`
         const channel = pusherClient?.subscribe(channelName)
@@ -51,11 +55,11 @@ export const useProjects = (workspaceId: string, teamId?: string) => {
         channel?.bind('project:deleted', handleDeleted)
 
         return () => {
-            // ✅ only remove THIS hook's listeners — leave the shared channel subscribed
+            // ✅ only remove this hook's listeners; leave the shared workspace channel subscribed
             channel?.unbind('project:created', handleCreated)
             channel?.unbind('project:updated', handleUpdated)
             channel?.unbind('project:deleted', handleDeleted)
-            subscribed.current = false
+            subscribed.current = null
         }
     }, [workspaceId, teamId])
 

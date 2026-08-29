@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react'
 import TextBg from '@/components/ui/textbg'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
+import { TaskActionIcon, TaskStatusIcon } from '@/components/ui/task-status'
 
 const MARKUP_ICONS: Record<string, any> = {
     'Task': CircleCheck,
@@ -90,15 +91,13 @@ const Page = () => {
                                         return (
                                             <tr onClick={() => router.push(`/${ws.url}/issue/${issue._id}`)} key={issue._id} className='hover:bg-sidebar/60 transition-colors cursor-pointer'>
                                                 <td className='pl-2 md:px-4 py-2.5 w-6'>
-                                                    <MarkupIcon size={16} className='text-muted-foreground' />
+                                                    {issue.action ? <TaskActionIcon action={issue.action} /> : <TaskStatusIcon status={issue.status} />}
                                                 </td>
                                                 <td className='px-4 py-2.5 max-w-50 md:w-full'>
                                                     <span className='truncate line-clamp-1'>{issue.title}</span>
                                                 </td>
-                                                <td>
-                                                    <TextBg size='sm' variant='purple' className='rounded-full'>
-                                                        {issue.status}
-                                                    </TextBg>
+                                                <td className='text-xs text-muted-foreground'>
+                                                    {issue.action ? issue.action : issue.status}
                                                 </td>
                                                 <td className='px-4 lg:px-8 xl:px-12 py-2.5 hidden lg:flex text-xs items-center mt-1 gap-1 text-muted-foreground whitespace-nowrap'>
                                                     <Calendar size={12} />

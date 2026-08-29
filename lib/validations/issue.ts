@@ -33,7 +33,6 @@ export const issueSchema = z.object({
         .default("")
         .refine((v) => countWords(v ?? "") <= MAX_DESCRIPTION_WORDS, `Description must be ${MAX_DESCRIPTION_WORDS} words or fewer`),
 
-    markup: z.enum(["Task", "To do", "Issue", "Review"]).default("Task"),
     priority: z.enum(["Low", "Medium", "High", "Urgent"]).optional().nullable(),
 
     teamId: z.string().min(1, "Team is required"),
@@ -70,7 +69,6 @@ export const issueUpdateSchema = z.object({
         .refine((v) => countWords(v ?? "") <= MAX_DESCRIPTION_WORDS, `Description must be ${MAX_DESCRIPTION_WORDS} words or fewer`)
         .optional(),
 
-    markup: z.enum(["Task", "To do", "Issue", "Review"]).optional(),
     priority: z.enum(["Low", "Medium", "High", "Urgent"]).optional().nullable(),
 
     assignee: z.string().optional().nullable(),

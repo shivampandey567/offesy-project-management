@@ -24,8 +24,12 @@ type DueDatePickerProps = {
     outline?: boolean
 }
 
-const formatLabel = (date: Date) =>
-    date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })
+const formatLabel = (date: Date) => {
+    const isDifferentYear = date.getFullYear() !== new Date().getFullYear()
+    return isDifferentYear
+        ? date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+        : date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })
+}
 
 const getPresets = () => {
     const now = new Date()
@@ -103,13 +107,13 @@ export function DueDatePicker({ value, onChange, outline = true }: DueDatePicker
         >
             <PopoverTrigger asChild>
                 {outline ? (
-                    <Button variant='outline' size="sm" className="rounded-full w-fit text-accent-foreground/80">
+                    <Button variant='outline' size="sm" className="rounded-full w-fit text-accent-foreground">
                         <CalendarPlus />
                         {value ? formatLabel(value) : 'Due date'}
                     </Button>
                 ) : (
                     !outline &&
-                    <Button variant='ghost' size="sm" className="rounded-full w-fit text-accent-foreground/80">
+                    <Button variant='ghost' size="sm" className="rounded-full w-fit text-accent-foreground">
                         <CalendarPlus />
                         {value ? formatLabel(value) : 'Due date'}
                     </Button>
@@ -165,7 +169,7 @@ export function DueDatePicker({ value, onChange, outline = true }: DueDatePicker
                                                 <CalendarIcon size={14} />
                                                 {p.label}
                                             </span>
-                                            <span className="text-muted-foreground text-sm">
+                                            <span className="text-accent-foreground text-sm">
                                                 {formatLabel(p.date)}
                                             </span>
                                         </CommandItem>

@@ -1,25 +1,16 @@
 'use client'
 import AppHeader from '@/components/app-header'
-import IssueCard from '@/components/issue-card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, getAvatarVariant, getInitials } from '@/components/ui/avatar'
 import { useProjectById } from '@/hooks/useProjectById'
 import { useIssues } from '@/hooks/useIssues'
 import { useTeams } from '@/hooks/useTeams'
 import { useWorkspace } from '@/lib/workspace-context'
-import { AlertCircle, Calendar, Circle, CircleCheck, Eye, UserCircle } from 'lucide-react'
+import { Calendar, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
-import TextBg from '@/components/ui/textbg'
 import { Skeleton } from '@/components/ui/skeleton'
-
-const MARKUP_ICONS: Record<string, any> = {
-    'Task': CircleCheck,
-    'To do': Circle,
-    'Issue': AlertCircle,
-    'Review': Eye,
-}
+import { TaskActionIcon, TaskStatusIcon } from '@/components/ui/task-status'
 
 const Page = () => {
     const { id } = useParams() as { id: string }
@@ -27,7 +18,6 @@ const Page = () => {
     const router = useRouter()
     const pathname = usePathname()
     const { project, loading: projectLoading } = useProjectById(id)
-    const { teams } = useTeams(ws.id)
     const { issues, loading: issuesLoading } = useIssues(project?.teamId?.[0], id)
 
     return (
@@ -36,7 +26,7 @@ const Page = () => {
                 title={project?.name}
                 onStarClick={() => console.log('hello')}
                 onMenuClick={() => console.log('menu')}
-                onLinkClick={()=>console.log('hello')}
+                onLinkClick={() => console.log('hello')}
             />
             <div className='flex flex-1 flex-col gap-4 p-2'>
                 <div className="flex items-center gap-2">
@@ -79,20 +69,17 @@ const Page = () => {
                                 </tr>
                             ) : (
                                 issues.map((issue) => {
-                                    const MarkupIcon = MARKUP_ICONS[issue.markup] ?? CircleCheck
 
                                     return (
                                         <tr onClick={() => router.push(`/${ws.url}/issue/${issue._id}`)} key={issue._id} className='hover:bg-sidebar/60 transition-colors cursor-pointer'>
                                             <td className='pl-2 md:px-4 py-2.5 w-6'>
-                                                <MarkupIcon size={16} className='text-muted-foreground' />
+                                                {issue.action ? <TaskActionIcon action={issue.action} /> : <TaskStatusIcon status={issue.status} />}
                                             </td>
                                             <td className='px-4 py-2.5 max-w-50 md:w-full'>
                                                 <span className='truncate line-clamp-1'>{issue.title}</span>
                                             </td>
-                                            <td>
-                                                <TextBg size='sm' variant='purple' className='rounded-full'>
-                                                    {issue.status}
-                                                </TextBg>
+                                            <td className='text-xs text-muted-foreground'>
+                                                {issue.action ? issue.action : issue.status}
                                             </td>
                                             <td className='px-4 lg:px-8 xl:px-12 py-2.5 hidden lg:flex text-xs items-center mt-1 gap-1 text-muted-foreground whitespace-nowrap'>
                                                 <Calendar size={12} />
@@ -100,7 +87,7 @@ const Page = () => {
                                                     ? new Date(issue.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                                                     : ''}
                                             </td>
-                                            <td className='px-4 py-2.5 text-right'>
+                                            <td className='px-2 md:px-4 py-2.5 text-right'>
                                                 {!issue.assignee ? (
                                                     <span className='flex justify-end text-muted-foreground'>
                                                         <UserCircle size={18} strokeWidth={1.5} />

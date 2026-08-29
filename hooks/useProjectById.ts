@@ -7,10 +7,14 @@ import { pusherClient } from "@/lib/pusherClient"
 export const useProjectById = (id: string) => {
     const [project, setProject] = useState<any>(null)
     const [loading, setLoading] = useState(true)
-    const subscribed = useRef(false)
+    const subscribed = useRef<string | null>(null)
 
     useEffect(() => {
-        if (!id) return
+        if (!id) {
+            setProject(null)
+            setLoading(false)
+            return
+        }
         setLoading(true)
         fetch(`/api/project/${id}`)
             .then(res => res.json())
@@ -21,22 +25,35 @@ export const useProjectById = (id: string) => {
     }, [id])
 
     useEffect(() => {
-        if (!id || subscribed.current) return
-        subscribed.current = true
+        if (!id || subscribed.current === id) return
+        subscribed.current = id
 
         const channelName = `project-${id}`
         const channel = pusherClient?.subscribe(channelName)
 
-        channel?.bind('project:updated', (data: Record<string, any>) => {
-            setProject((prev: any) => prev ? { ...prev, ...data } : prev)
-        })
-        channel?.bind('project:deleted', () => {
+        const handleUpdated = (data: Record<string, any>) => {
+            setProject((prev: any) => {
+                if (!prev) return data
+                const next = { ...prev, ...data }
+                // preserve populated createdBy/workspaceId if the update only sent an id string
+                if (next.createdBy && typeof next.createdBy === 'string' && prev.createdBy?._id && String(prev.createdBy._id) === String(next.createdBy)) {
+                    next.createdBy = prev.createdBy
+                }
+                return next
+            })
+        }
+        const handleDeleted = () => {
             setProject(null)
-        })
+        }
+
+        channel?.bind('project:updated', handleUpdated)
+        channel?.bind('project:deleted', handleDeleted)
 
         return () => {
-            pusherClient?.unsubscribe(channelName)
-            subscribed.current = false
+            // only remove this hook's listeners; leave the shared channel subscribed
+            channel?.unbind('project:updated', handleUpdated)
+            channel?.unbind('project:deleted', handleDeleted)
+            subscribed.current = null
         }
     }, [id])
 

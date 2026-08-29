@@ -5,21 +5,14 @@ import AppHeader from '@/components/app-header'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Avatar, AvatarFallback, getAvatarVariant, getInitials } from '@/components/ui/avatar'
-import TextBg from '@/components/ui/textbg'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useWorkspace } from '@/lib/workspace-context'
 import { useMyIssues } from '@/hooks/useMyIssues'
-import { AlertCircle, Calendar, Circle, CircleCheck, Eye, ListFilter, Search, UserCircle } from 'lucide-react'
+import { Calendar, ListFilter, Search, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
-
-const MARKUP_ICONS: Record<string, any> = {
-  'Task': CircleCheck,
-  'To do': Circle,
-  'Issue': AlertCircle,
-  'Review': Eye,
-}
+import { TaskActionIcon, TaskStatusIcon } from '@/components/ui/task-status'
 
 const Page = () => {
   const pathname = usePathname()
@@ -81,13 +74,12 @@ const Page = () => {
                 </tr>
               ) : (
                 filteredIssues.map((issue) => {
-                  const MarkupIcon = MARKUP_ICONS[issue.markup] ?? CircleCheck
                   const team = issue.teamId // populated: { _id, name, icon, slug }
 
                   return (
                     <tr key={issue._id} onClick={() => router.push(`/${ws.url}/issue/${issue._id}`)} className='hover:bg-sidebar/60 transition-colors cursor-pointer'>
                       <td className='pl-2 lg:px-4 py-2.5 w-6'>
-                        <MarkupIcon size={16} className='text-muted-foreground' />
+                        {issue.action ? <TaskActionIcon action={issue.action} /> : <TaskStatusIcon status={issue.status} />}
                       </td>
                       <td className='px-2 lg:px-4 py-2.5 max-w-45 md:w-full'>
                         <span className='truncate line-clamp-1'>{issue.title}</span>
@@ -99,10 +91,8 @@ const Page = () => {
                           </span>
                         </td>
                       )}
-                      <td className='px-0 lg:px-4 xl:px-6 py-2.5'>
-                        <TextBg size='sm' variant='purple' className='rounded-full'>
-                          {issue.status}
-                        </TextBg>
+                      <td className='px-0 lg:px-4 xl:px-6 py-2.5 text-muted-foreground text-xs'>
+                          {issue.action ? issue.action : issue.status }
                       </td>
                       <td className='lg:px-4 xl:px-6 py-2.5 hidden lg:flex text-xs items-center mt-1 gap-1 text-muted-foreground whitespace-nowrap'>
                         <Calendar size={12} />
