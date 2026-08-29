@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`
 
         await resend.emails.send({
-            from: 'onboarding@resend.dev',
+            from: 'Offesy <invites@offesy.in>',
             to: email,
             subject: `You're invited to join ${workspace.name}`,
             html: `
