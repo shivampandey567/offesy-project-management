@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Offesy
 
-## Getting Started
+**Real-time, AI-powered project management platform**, live at [offesy.in](https://offesy.in)
 
-First, run the development server:
+[![Offesy](https://raw.githubusercontent.com/shivampandey567/YOUR-DEMO-REPO/main/Screenshots/offesy-screenshot-1.png)](https://www.linkedin.com/posts/shivam-pandey-b8078a358_buildinpublic-nextjs-typescript-ugcPost-7484473493233803264-3b2o/)
+
+Screenshots and walkthrough: [Demo repo](https://github.com/shivampandey567/YOUR-DEMO-REPO)
+
+## Features
+
+- **Auth:** Clerk sign up/sign in, sessions, protected routes
+- **Workspaces:** multiple workspaces, email invites, Admin and Member roles
+- **Teams:** teams inside workspaces, member management
+- **Projects and Issues:** status, priority, labels, progress tracking, sub-issues
+- **Collaboration:** real-time comments, reactions, file and image attachments
+- **Notifications:** real-time updates (Pusher) and email (Resend)
+- **AI Assistant:** Gemini-powered project Q&A and summaries using RAG with embeddings
+
+## Tech Stack
+
+Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, MongoDB Atlas + Mongoose, Clerk, Pusher, Resend, Vercel Blob, Gemini API, deployed on Vercel.
+
+## Run locally
 
 ```bash
+git clone https://github.com/shivampandey567/offesy.git
+cd offesy
+npm install
+cp .env.example .env.local   # add your keys
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MongoDB URI, Clerk keys, Pusher keys, Resend API key, Gemini API key, Vercel Blob token. See `.env.example`.
